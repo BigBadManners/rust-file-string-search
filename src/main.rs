@@ -57,7 +57,7 @@ fn extracted_files() -> Result<Vec<(String, String)>, ExitFailure> {
                 // find() takes &str; only way to get this out of a String is to slice it.
                 match key.find(&mut content[..]) {
                     Some(_m) => {
-                        data.push((filename[2..].to_string(), content)) // trims leading './'
+                        data.push((filename, content)) // trims leading './'
                     },
                     None => continue,
                 }
