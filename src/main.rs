@@ -1,23 +1,41 @@
+// Crate imports
 extern crate walkdir;
 extern crate regex;
+extern crate structopt;
+extern crate failure;
+extern crate exitfailure;
 
+// Crates
 use std::fs::File;
 use walkdir::WalkDir;
 use std::io::Read;
 use regex::RegexBuilder;
+use failure::ResultExt;
+use exitfailure::ExitFailure;
 
-fn extracted_files() -> Vec::<(String, String)> {
+// Mods & imports
+mod parse_options;
+use parse_options::options;
+use crate::structopt::StructOpt;
+
+
+fn extracted_files() -> Result<Vec::<(String, String)>, ExitFailure> {
+    // Get options from CLI
+    let options: options::Options = options::Options::from_args();
+
+
 
     // Create regex
-    let key = "foobar";
-    let key = RegexBuilder::new(key)
+    let key = RegexBuilder::new(&options.get_key())
         .case_insensitive(true)
         .build()
-        .expect("Invalid Regex");
+        .with_context(|_| format!("Invalid regex: {:?}", &options.get_key()))
+        .unwrap();
+
 
     // Create filelist Vector, and WalkDir iterator objects to traverse through directories
     let mut data = Vec::<(String, String)>::new();
-    for file in WalkDir::new(".\\test").into_iter()
+    for file in WalkDir::new(options.directory).into_iter()
         .filter_map(|file| file.ok()) { //WalkDir impls Iterator and IntoIter for into_iter() and filter_map()
         let filename = match file.path().is_file() {
             true => file.path().display().to_string(), // Returns filenames
@@ -39,7 +57,7 @@ fn extracted_files() -> Vec::<(String, String)> {
                 // Use regex to search through a slice of content
                 // find() takes &str; only way to get this out of a String is to slice it.
                 match key.find(&mut content[..]) {
-                    Some(m) => data.push((filename, content)),
+                    Some(_m) => data.push((filename, content)),
                     None => continue,
                 }
 
@@ -51,11 +69,11 @@ fn extracted_files() -> Vec::<(String, String)> {
         }
     }
 
-    data
+    Ok(data)
 }
 
 fn main() {
-    let filelist = extracted_files();
+    let filelist = extracted_files().unwrap();
 
     // Check if no files matched the key
     match filelist.is_empty() {

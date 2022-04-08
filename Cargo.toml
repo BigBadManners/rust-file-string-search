@@ -8,3 +8,6 @@ edition = "2021"
 [dependencies]
 walkdir = "2.3.2"
 regex = "1.5.5"
+structopt = "0.3.26"
+failure = "0.1.8"
+exitfailure = "0.5.1"
