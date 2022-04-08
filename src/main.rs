@@ -6,9 +6,9 @@ extern crate failure;
 extern crate exitfailure;
 
 // Crates
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use walkdir::WalkDir;
-use std::io::Read;
+use std::io::{Read, Write};
 use regex::RegexBuilder;
 use failure::ResultExt;
 use exitfailure::ExitFailure;
@@ -18,8 +18,7 @@ mod parse_options;
 use parse_options::options;
 use crate::structopt::StructOpt;
 
-
-fn extracted_files() -> Result<Vec::<(String, String)>, ExitFailure> {
+fn extracted_files() -> Result<Vec<(String, String)>, ExitFailure> {
     // Get options from CLI
     let options: options::Options = options::Options::from_args();
 
@@ -57,7 +56,9 @@ fn extracted_files() -> Result<Vec::<(String, String)>, ExitFailure> {
                 // Use regex to search through a slice of content
                 // find() takes &str; only way to get this out of a String is to slice it.
                 match key.find(&mut content[..]) {
-                    Some(_m) => data.push((filename, content)),
+                    Some(_m) => {
+                        data.push((filename[2..].to_string(), content)) // trims leading './'
+                    },
                     None => continue,
                 }
 
@@ -72,17 +73,36 @@ fn extracted_files() -> Result<Vec::<(String, String)>, ExitFailure> {
     Ok(data)
 }
 
+fn write_to_file(list: Vec<(String, String)>) -> Result<(), ExitFailure>{
+
+    // Really don't wanna call this again but
+    let file: options::Options = options::Options::from_args();
+    let file = file.output;
+
+    // open file for writing
+    let mut output = OpenOptions::new()
+        .write(true)
+        .read(true)
+        .create(true)
+        .open(&file).unwrap();
+
+    println!("Found matches for the key. Directory paths saved to {}", &file);
+    for files in list.into_iter() {
+        writeln!(&mut output, "{}", files.0)?;
+    }
+
+    Ok(())
+}
+
 fn main() {
     let filelist = extracted_files().unwrap();
+
 
     // Check if no files matched the key
     match filelist.is_empty() {
         true => println!("No files matched the key :("),
         false => {
-            println!("Found matches for the key");
-            for i in filelist.into_iter() {
-                println!("{}", i.0); // It's a tuple
-            }
+            write_to_file(filelist).unwrap();
         },
     }
 

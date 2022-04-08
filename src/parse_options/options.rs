@@ -8,6 +8,10 @@ pub struct Options {
     /// Specify key: -k [key]
     #[structopt(short = "k", long = "key", default_value = "foobar")]
     pub key: String,
+
+    /// Specify output file: -o [filename]
+    #[structopt(short = "o", long = "output", default_value = "output.txt")]
+    pub output: String,
 }
 
 impl Options {
