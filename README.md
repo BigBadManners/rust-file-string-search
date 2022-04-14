@@ -7,3 +7,5 @@ String search CLI written in Rust that searches for a regex string in a given di
 - structopt
 - failure
 - exitfailure
+- encoding_rs
+- encoding_rs_io
