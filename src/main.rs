@@ -4,11 +4,16 @@ extern crate regex;
 extern crate structopt;
 extern crate failure;
 extern crate exitfailure;
+extern crate encoding_rs;
+extern crate encoding_rs_io;
+
+use encoding_rs::WINDOWS_1252;
+use encoding_rs_io::DecodeReaderBytesBuilder;
 
 // Crates
 use std::fs::{File, OpenOptions};
 use walkdir::WalkDir;
-use std::io::{Read, Write};
+use std::io::{Read, Write, BufReader};
 use regex::RegexBuilder;
 use failure::ResultExt;
 use exitfailure::ExitFailure;
@@ -17,6 +22,7 @@ use exitfailure::ExitFailure;
 mod parse_options;
 use parse_options::options;
 use crate::structopt::StructOpt;
+
 
 fn extracted_files() -> Result<Vec<(String, String)>, ExitFailure> {
     // Get options from CLI
@@ -40,18 +46,33 @@ fn extracted_files() -> Result<Vec<(String, String)>, ExitFailure> {
             true => file.path().display().to_string(), // Returns filenames
             false => continue, // This is not a file; move on
         };
-        println!("{}", filename);
+
+        // Skips over files if the key is IN the filename
+        match key.find(&filename[..]) {
+            Some(_k) => continue,
+            None => {
+                println!("{}", filename);
+            }
+
+        }
+
+
 
         // use File struct to open file from given filename
         match File::open(&filename) {
-            Ok(mut f) => {
+            Ok(ref mut f) => {
+                let mut reader = BufReader::new(
+                    DecodeReaderBytesBuilder::new()
+                    .encoding(Some(WINDOWS_1252))
+                    .build(f)
+                );
                 let mut content = String::new(); // set up String to hold file contents
-                match f.read_to_string(&mut content) {
+                match reader.read_to_string(&mut content) {
                     Ok(_) => println!("Successfully read file {}", &filename),
                     Err(e) => println!("Could not print file: {}", e), // File (likely) has
                     // non-UTF-8 data; will need to implement
                 };
-                f.read_to_string(&mut content).unwrap(); // Store file contents in String
+                reader.read_to_string(&mut content).unwrap(); // Store file contents in String
 
                 // Use regex to search through a slice of content
                 // find() takes &str; only way to get this out of a String is to slice it.
